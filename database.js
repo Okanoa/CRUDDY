@@ -51,13 +51,11 @@ class User {
 
 	serialize() {
 		const json_out = JSON.stringify(this);
-		console.log(this)
 		fs.writeFileSync(`./users/${this.name.user}.json`, json_out)
 	}
 
 	deserialize(username) {
 		const data = fs.readFileSync(`./users/${username}.json`);
-		console.log(username, data)
 		const obj = JSON.parse(data);
 
 		this.name = {

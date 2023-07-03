@@ -1,41 +1,94 @@
 const express = require('express');
+const session = require('express-session');
+const router = express.Router();
 const app = express();
 
-const db = require('./database').DB();
+const bcrypt = require('bcrypt');
+require('dotenv').config();
 
-const path = require('path');
+const db = require('./database').DB();
 const port = process.env.PORT || 5000;
 
-app.use(express.static(path.join(__dirname, 'client/build')));
-app.use(express.json());
+app.use(express.static('static'));
+app.use(express.urlencoded({
+  extended: true
+}));
+app.use(session({
+  secret: 'a secret token that should be apart of a .env file!',
+  resave: true,
+  cookie: {maxAge: 1000*60*60*24 },
+  saveUninitialized: true
+}));
 
-db.newUser("jsmith","john", "smith", "nothashed")
+const render = require('./template');
+const login_rend = require('./templates/login')
+const register_rend = require('./templates/register')
 
-let usr = db.getUser("bob");
-usr.newItem("pickle", "really nasty no good food!", 1);
-
-usr.serialize();
-
-// loginpage
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build', 'index.html'))
+router.route("/").get((req, res, next) => {
+  if (req.session.auth) {
+    res.redirect(`/${req.session.username}`);
+  } else {
+    res.redirect('/login');
+  }
 });
 
-app.get('/:user', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build', 'index.html'))
+router.route("/login").get((req, res, next) => {
+  res.send(render("Login", login_rend()));
+}).post((req, res, next) => {
+
+  const username = req.body.username;
+  const password = req.body.password;
+
+  if (username && password) {
+    const user = db.getUser(username);
+    let authenticated = null;
+
+    if (user) {
+      authenticated = bcrypt.compareSync(password, user.password);
+    }
+
+    if (authenticated) {
+      console.log(authenticated);
+      req.session.auth = true;
+      req.session.username = username;
+      // redirect
+      res.redirect(`/${username}`);
+    } else {
+      res.send(render("Login", login_rend('Incorrect Username or Password.')));
+    }
+  } else {
+    res.send(render("Login", login_rend('Please enter a Username and Password.')));
+  }
 });
 
-app.get('/:user', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build', 'index.html'))
+router.route("/register").get((req, res, next) => {
+  res.send(render("register", register_rend()));
+}).post((req, res, next) => {
+
+  const username = req.body.username;
+  const firstname = req.body.firstname;
+  const lastname = req.body.lastname;
+  const password = req.body.password;
+
+  const success = db.newUser(username, firstname, lastname, bcrypt.hashSync(password, 10));
+  if (success) {
+    req.session.auth = true;
+    req.session.username = username;
+    // redirect
+    res.redirect(`/${username}`);
+  } else {
+    res.send(render("register", register_rend('Username already taken.')));
+  }
 });
 
-// if I had more time it would be a good idea to setup a subdomain such as api.page.com/req
-app.get('/api/:user', (req, res) => {
-  res.json(db.getUser(req.params.user));
+router.route("/:user").get((req, res, next) => {
+  res.send(render("user", "w3eb"));
 });
 
-app.get('/api/:user/:item', (req, res) => {
-  res.send(db.getUser(req.params.user).items[req.params.item])
+router.route("/:user/:item").get((req, res, next) => {
+  res.send(render("item", "w3eb"));
 });
+
+app.use("/", router);
 
 app.listen(port, () => console.log(`on port ${port}`));
