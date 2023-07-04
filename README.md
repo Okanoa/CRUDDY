@@ -7,3 +7,5 @@ As well I could certainly deploy it to a live environment.
 
 Also note that there is no protection from html injection what so ever and also writes user input directly to disk,
 this is not a great way to have things setup but it was the quickest way to do so without prebuilt database.
+
+React was not used, just JS and some HTMX
