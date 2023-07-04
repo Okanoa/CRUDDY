@@ -110,13 +110,60 @@ router.route("/:user").get((req, res) => {
   ));
 });
 
+const verifyOwnership = (req) => {
+  if (req.session.auth && req.session.username == req.params.user) {
+    return true
+  }
+}
+
 router.route("/:user/new").get((req, res) => {
-  res.send(render("Create Item", "w3eb"));
-}).post();
+  res.send(render("Create Item", item_rend("new", `/${req.params.user}/new`, null, verifyOwnership(req))));
+}).post((req, res) => {
+  if (verifyOwnership(req)) {
+    let usr = db.getUser(req.session.username);
+
+    usr.newItem(req.body.name,req.body.description,req.body.quantity);
+
+    usr.serialize();
+    res.redirect(`/${req.session.username}`);
+    return;
+  }
+});
+
+router.route("/:user/:item/edit").get((req, res) => {
+  const usr = db.getUser(req.params.user)  
+  res.send(item_rend("edit", `/${req.params.user}/${req.params.item}`, usr.items[req.params.item], verifyOwnership(req)));
+})
 
 router.route("/:user/:item").get((req, res) => {
-  res.send(render("put item name here", "w3eb", navbar_rend(req.session.auth, req.session.username)));
-}).put().delete();
+  const usr = db.getUser(req.params.user)  
+  res.send(render(
+    "Item",
+    item_rend("view", `/${req.params.user}/${req.params.item}`, usr.items[req.params.item], verifyOwnership(req), req.params.user),
+    navbar_rend(req.session.auth, req.session.username)
+  ));
+}).put((req, res) => {
+  if (verifyOwnership(req)) {
+    let usr = db.getUser(req.session.username);
+console.log("puttty")
+    usr.setItem(req.params.item, req.body.name,req.body.description,req.body.quantity);
+
+    usr.serialize();
+    res.redirect(`/${req.session.username}`);
+    return;
+  }
+}).delete((req, res) => {
+  if (verifyOwnership(req)) {
+    let usr = db.getUser(req.session.username);
+
+    console.log("del")
+    usr.delItem(req.params.item);
+
+    usr.serialize();
+    res.redirect(301, `/${req.session.username}`);
+    return;
+  }
+});
 
 app.use("/", router);
 app.listen(port, () => console.log(`on port ${port}`));

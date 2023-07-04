@@ -12,6 +12,16 @@ module.exports = (logged_in, user, owner) => {
 
   console.log(logged_in, owner)
 
+  if (logged_in && owner ) {
+    inventory += `
+    <div class="card mb-2">
+      <div class="card-body">
+        <h5 class="card-title">Welcome back, ${user.name.first} ${user.name.last}!</h5>
+        <a href="/${user.name.user}/new" class="card-link">New Item</a>
+      </div>
+    </div>
+    `;
+  }
   // new item element button here please
   let itemCount = user.items.length
   
@@ -19,7 +29,7 @@ module.exports = (logged_in, user, owner) => {
     .forEach((item) => {
       itemCount -= 1;
       inventory += `
-      <div class="card">
+      <div class="card mb-2">
         <div class="card-body">
           <h5 class="card-title"><span class="badge rounded-pill text-bg-primary">${item.quantity}</span> ${item.name}</h5>
           <p>${truncText(item.description)}</p>
